@@ -88,6 +88,6 @@ if targetBrightness > currentBrightness:
 elif targetBrightness < currentBrightness:
 	while currentBrightness >= targetBrightness:
 		pi.set_PWM_dutycycle(pin, currentBrightness)
-        currentBrightness = currentBrightness - 2
+		currentBrightness = currentBrightness - 2
 		time.sleep(0.05)
 
