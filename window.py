@@ -18,7 +18,7 @@ url = "https://query.yahooapis.com/v1/public/yql?q=select%20item.condition,astro
 response = urllib.urlopen(url)
 data = json.loads(response.read())
 
-weatherCode = data['query']['results']['channel']['item']['condition']['code']
+weatherCode = int(data['query']['results']['channel']['item']['condition']['code'])
 weatherText = data['query']['results']['channel']['item']['condition']['text']
 sunrise = data['query']['results']['channel']['astronomy']['sunrise']
 sunset = data['query']['results']['channel']['astronomy']['sunset']
@@ -26,12 +26,12 @@ sunset = data['query']['results']['channel']['astronomy']['sunset']
 print "Weather code: " + str(weatherCode) + " (" + weatherText + "), Sunrise: " + sunrise + ", Sunset: " + sunset
 
 # Set max brightness based on weather
-if weatherCode < 23:
-	maxBright = 25
+if weatherCode < 23 or (weatherCode > 25 and weatherCode < 29):
+	maxBright = 35
 elif weatherCode >= 32 and weatherCode <= 36:
-	maxBright = 70
+	maxBright = 75
 else:
-	maxBright = 40
+	maxBright = 50
 
 print "Maxbrightness: " + str(maxBright)
 
@@ -39,6 +39,7 @@ print "Maxbrightness: " + str(maxBright)
 cTime = time.localtime()
 now = time.time()
 
+# Calc sunrise/sunset timeframes
 sunriseTime = str(cTime[0]) + '-' + str(cTime[1]) + '-' + str(cTime[2]) + ' ' + sunrise
 
 sunriseStart = int(time.mktime(time.strptime(sunriseTime, "%Y-%m-%d %I:%M %p"))) - 1800
@@ -50,7 +51,7 @@ sunsetStart = int(time.mktime(time.strptime(sunsetTime, "%Y-%m-%d %I:%M %p"))) -
 sunsetEnd = sunsetStart + 3600
 
 
-
+# Determine the brightness
 if now >= sunriseStart and now <= sunriseEnd:
 	elapsed = now - sunriseStart
 	percent = elapsed / 3600
@@ -74,7 +75,19 @@ else:
 	brightness = 0
 	print "Night, Brightness: 0"
 
-# Set the brightness!
-pi.set_PWM_dutycycle(pin, brightness * 2.55)
+# Set the brightness gradually
+currentBrightness = pi.get_PWM_dutycycle(pin)
+targetBrightness = brightness * 2.55
 
+if targetBrightness > currentBrightness:
+	while currentBrightness <= targetBrightness:
+		pi.set_PWM_dutycycle(pin, currentBrightness)
+		currentBrightness = currentBrightness + 2
+		time.sleep(0.05)
+
+elif targetBrightness < currentBrightness:
+	while currentBrightness >= targetBrightness:
+		pi.set_PWM_dutycycle(pin, currentBrightness)
+        currentBrightness = currentBrightness - 2
+		time.sleep(0.05)
 
