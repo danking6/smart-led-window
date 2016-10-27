@@ -16,8 +16,9 @@ if (isset($_POST['autoBrightness'])) {
 	
 	if ($_POST['autoBrightness']) {
 		exec('/home/pi/window.py');
-		echo exec('/usr/bin/pigs gdc 21');
 	}
+
+	echo exec('/usr/bin/pigs gdc 21');
 	
 	exit;
 }
@@ -99,7 +100,7 @@ $isAutoBrightness = file_get_contents('/var/www/html/autoBrightness.txt')
         <script>
 	       	function outputUpdate(vol) 
 		   	{
-				document.querySelector('#volume').value = Math.round(vol / 2.55) + '%';
+				$('#volume').text(Math.round(vol / 2.55) + '%');
 				
 				if ($('#autobrightness').hasClass('btn-primary')) {
 					$('#autobrightness').trigger('click');
@@ -109,9 +110,6 @@ $isAutoBrightness = file_get_contents('/var/www/html/autoBrightness.txt')
 				  method: "POST",
 				  url: "index.php",
 				  data: { brightness: vol}
-				})
-				.done(function( msg ) {
-				    //alert( "Data Saved: " + msg );
 				});
 			}
 			
@@ -131,6 +129,7 @@ $isAutoBrightness = file_get_contents('/var/www/html/autoBrightness.txt')
 				})
 				.done(function( msg ) {
 				    $('input[type=range]').val(msg);
+				    $('#volume').text(Math.round(msg / 2.55) + '%');
 				});
 			}
 			
