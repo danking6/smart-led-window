@@ -1,45 +1,68 @@
 #!/usr/bin/env python
 
+# ------------------------------------------------------------
+# File:   window.py
+# Author: Dan King
+#
+# This script needs pigpiod to be running (http://abyz.co.uk/rpi/pigpio/)
+# ------------------------------------------------------------
+
+
+##### Configuration #####
+
+# GPIO pin number
+pin = 21
+
+# Brightness levels (percent)
+cloudy = 30
+mixed = 50
+sunny = 75
+
+# Debug, show output
+debug = True
+
+##### End configuration #####
+
+
 import json,urllib,time,pigpio
 
-# GPIO pin to use (change if needed)
-pin = 21
 pi = pigpio.pi()
 
 # Make sure autoBrightness is enabled
-file = open('/var/www/html/autoBrightness.txt', 'r')
-
-if not int(file.read(1)):
+if not int(open('/var/www/html/autoBrightness.txt', 'r').read(1)):
 	exit()
 
 # Get weather from Yahoo to determine max brightness
 url = "https://query.yahooapis.com/v1/public/yql?q=select%20item.condition,astronomy.sunrise,astronomy.sunset%20from%20weather.forecast%20where%20woeid%20in%20(select%20woeid%20from%20geo.places(1)%20where%20text%3D%22syracuse%2C%20ny%22)&format=json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys"
 
-response = urllib.urlopen(url)
-data = json.loads(response.read())
+data = json.loads(urllib.urlopen(url).read())
 
 weatherCode = int(data['query']['results']['channel']['item']['condition']['code'])
 weatherText = data['query']['results']['channel']['item']['condition']['text']
 sunrise = data['query']['results']['channel']['astronomy']['sunrise']
 sunset = data['query']['results']['channel']['astronomy']['sunset']
 
-print "Weather code: " + str(weatherCode) + " (" + weatherText + "), Sunrise: " + sunrise + ", Sunset: " + sunset
 
 # Set max brightness based on weather
-if weatherCode < 23 or (weatherCode > 25 and weatherCode < 29):
-	maxBright = 35
+if weatherCode < 23 or (weatherCode > 25 and weatherCode < 29) or (weatherCode > 40 and weatherCode < 44):
+	maxBright = cloudy
 elif weatherCode >= 32 and weatherCode <= 36:
-	maxBright = 75
+	maxBright = sunny
 else:
-	maxBright = 50
+	maxBright = mixed
 
-print "Maxbrightness: " + str(maxBright)
+if debug:
+	print "Weather code: " + str(weatherCode) + " (" + weatherText + "), Sunrise: " + sunrise + ", Sunset: " + sunset
+	print "Max brightness: " + str(maxBright)
 
 # Current time
 cTime = time.localtime()
 now = time.time()
 
-# Calc sunrise/sunset timeframes
+# Calc sunrise/sunset timeframes. 
+# Sunrise/set starts 30 minutes before actual time, and 
+# ends 30 minutes after actual time, gradually changing brightness during the hour.
+
 sunriseTime = str(cTime[0]) + '-' + str(cTime[1]) + '-' + str(cTime[2]) + ' ' + sunrise
 
 sunriseStart = int(time.mktime(time.strptime(sunriseTime, "%Y-%m-%d %I:%M %p"))) - 1800
@@ -56,24 +79,25 @@ if now >= sunriseStart and now <= sunriseEnd:
 	elapsed = now - sunriseStart
 	percent = elapsed / 3600
 	brightness = maxBright * percent
-	
-	print "Sunrise, Brightness: " + str(brightness * 2.55)
+	timeOfDay = "Sunrise"
 		
-
 elif now > sunriseEnd and now < sunsetStart:
 	brightness = maxBright
-	print "Day, Brightness:" + str(maxBright * 2.55)
+	timeOfDay = "Day"
 
 elif now >= sunsetStart and now <= sunsetEnd:
 	elapsed = sunsetEnd - now
 	percent = elapsed / 3600
 	brightness = maxBright * percent
+	timeOfDay = "Sunset"
 	
-	print "Sunset, Brightness: " + str(brightness * 2.55)
-
 else:
 	brightness = 0
-	print "Night, Brightness: 0"
+	timeOfDay = "Night"
+
+if debug:
+		print timeOfDay + ", Brightness: " + str(brightness * 2.55)
+
 
 # Set the brightness gradually
 currentBrightness = pi.get_PWM_dutycycle(pin)
