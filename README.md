@@ -5,4 +5,4 @@ Like most basements, mine was dark with only a couple tiny windows letting in al
 
 The window is contollable via web interface. The LED strip brightness can be manually, or automatically set according to sunset/sunrise times and the weather pulled from the Yahoo! API. If it's sunny, the window is bright, if it's cloudy, the window is more dim. It fades on at sunrise, and fades off at sunset. 
 
-Check out the Instructable Article for the full how-to!
+Check out the <a href="http://www.instructables.com/id/Smart-LED-Window/">Instructable article</a> for the full how-to!
