@@ -13,6 +13,9 @@
 # GPIO pin number
 pin = 21
 
+# Yahoo! woeid (location ID)
+woeid = "12762731"
+
 # Brightness levels (percent)
 cloudy = 30
 mixed = 50
@@ -26,14 +29,12 @@ debug = True
 
 import json,urllib,time,pigpio
 
-pi = pigpio.pi()
-
 # Make sure autoBrightness is enabled
 if not int(open('/var/www/html/autoBrightness.txt', 'r').read(1)):
 	exit()
 
 # Get weather from Yahoo to determine max brightness
-url = "https://query.yahooapis.com/v1/public/yql?q=select%20item.condition,astronomy.sunrise,astronomy.sunset%20from%20weather.forecast%20where%20woeid%20in%20(select%20woeid%20from%20geo.places(1)%20where%20text%3D%22syracuse%2C%20ny%22)&format=json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys"
+url = "https://query.yahooapis.com/v1/public/yql?q=select item.condition, astronomy.sunrise, astronomy.sunset from weather.forecast where woeid=" + woeid + "&format=json"
 
 data = json.loads(urllib.urlopen(url).read())
 
@@ -44,7 +45,7 @@ sunset = data['query']['results']['channel']['astronomy']['sunset']
 
 
 # Set max brightness based on weather
-if weatherCode < 23 or (weatherCode > 25 and weatherCode < 29) or (weatherCode > 40 and weatherCode < 44):
+if weatherCode < 23 or weatherCode in [26,27,28,41,42,43]: #(weatherCode > 25 and weatherCode < 29) or (weatherCode > 40 and weatherCode < 44):
 	maxBright = cloudy
 elif weatherCode >= 32 and weatherCode <= 36:
 	maxBright = sunny
@@ -96,10 +97,11 @@ else:
 	timeOfDay = "Night"
 
 if debug:
-		print timeOfDay + ", Brightness: " + str(brightness * 2.55)
+	print timeOfDay + ", Brightness: " + str(brightness * 2.55)
 
 
 # Set the brightness gradually
+pi = pigpio.pi()
 currentBrightness = pi.get_PWM_dutycycle(pin)
 targetBrightness = brightness * 2.55
 
