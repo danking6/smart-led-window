@@ -1,33 +1,36 @@
-<?php if (isset($_POST['brightness'])) { 
+<?php 
+// GPIO pin number
+$pin = 21;
+	
+if (isset($_POST['brightness'])) { 
 
-	$b = $_POST['brightness'];
+	$targetBrightness = ($_POST['brightness'] > 255) ? 255 : $_POST['brightness'];
 	
-	$b = ($b > 255) ? $b = 255 : $b;
-	
-	$cmd = '/usr/bin/pigs p 21 '.$b;
-	
-	exec($cmd);
+	exec('/usr/bin/pigs p ' . $pin . ' ' . $targetBrightness);
 	
 	exit;
 } 
 if (isset($_POST['autoBrightness'])) {
+	$json = json_decode(file_get_contents('/var/www/html/window.conf'));
 	
-	file_put_contents('/var/www/html/autoBrightness.txt', $_POST['autoBrightness']);
+	$json->auto = $_POST['autoBrightness'];
+	
+	file_put_contents('/var/www/html/window.conf', json_encode($json));
 	
 	if ($_POST['autoBrightness']) {
 		exec('/home/pi/window.py');
 	}
 
-	echo exec('/usr/bin/pigs gdc 21');
+	echo exec('/usr/bin/pigs gdc ' . $pin);
 	
 	exit;
 }
 
 // Get current brightness value
-$brightness = exec('/usr/bin/pigs gdc 21');
+$brightness = exec('/usr/bin/pigs gdc ' . $pin);
 
 // Get auto-brightness setting
-$isAutoBrightness = file_get_contents('/var/www/html/autoBrightness.txt')
+$isAutoBrightness = json_decode(file_get_contents('/var/www/html/window.conf'))->auto;
 ?>
 <!DOCTYPE html>
 <html lang="en">
