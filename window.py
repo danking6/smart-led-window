@@ -21,36 +21,54 @@ cloudy = 25
 mixed = 50
 sunny = 75
 
+# Config file, persistent configs
+confFile = '/var/www/html/window.conf'
+
 # Debug, show output
 debug = True
 
 ##### End configuration #####
 
 
-import requests,time,pigpio
+import requests,time,pigpio,json
 
-# Make sure autoBrightness is enabled
-if not int(open('/var/www/html/autoBrightness.txt', 'r').read(1)):
+# Load config file for cache/settings
+f = open(confFile, 'r')
+settings = json.loads(f.read())
+f.close()
+
+if not int(settings['auto']):
 	exit()
 	
 # Get weather from Yahoo to determine max brightness
 url = "https://query.yahooapis.com/v1/public/yql?q=select item.condition, astronomy.sunrise, astronomy.sunset from weather.forecast where woeid=" + woeid + "&format=json"
 
 try:
-	data = requests.get(url, timeout=5).json()
+	data = requests.get(url, timeout=10).json()
 
 	weatherCode = int(data['query']['results']['channel']['item']['condition']['code'])
 	weatherText = data['query']['results']['channel']['item']['condition']['text']
 	sunrise = data['query']['results']['channel']['astronomy']['sunrise']
 	sunset = data['query']['results']['channel']['astronomy']['sunset']
 	
+	# Save/cache values
+	settings['auto'] = 1
+	settings['weather'] = weatherCode
+	settings['sunrise'] = sunrise
+	settings['sunset'] = sunset
+	
+	f = open(confFile, 'w')
+	f.write(json.dumps(settings))
+	f.close()
+	
 except:
 	print("Error: Unable to connect to Yahoo! API")
-		
-	weatherCode = 25
-	weatherText = "Mixed"
-	sunrise = "7:00 am"
-	sunset = "7:00 pm"
+	
+	# Use settings from cache
+	weatherCode = settings['weather']
+	weatherText = ""
+	sunrise = settings['sunrise']
+	sunset = settings['sunset']
 
 
 # Set max brightness based on weather
@@ -145,8 +163,3 @@ elif targetBrightness < currentBrightness:
 		
 		currentBrightness = currentBrightness - amt
 		time.sleep(0.05)
-		
-		
-		
-
-
