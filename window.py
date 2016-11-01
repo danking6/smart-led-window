@@ -17,8 +17,8 @@ pin = 21
 woeid = "12762731"
 
 # Brightness levels (percent)
-cloudy = 25
-mixed = 50
+cloudy = 20
+mixed = 40
 sunny = 75
 
 # Config file, persistent configs
@@ -38,6 +38,8 @@ settings = json.loads(f.read())
 f.close()
 
 if not int(settings['auto']):
+	if debug:
+		print('Auto brightness disabled, exiting...')
 	exit()
 	
 # Get weather from Yahoo to determine max brightness
@@ -72,7 +74,7 @@ except:
 
 
 # Set max brightness based on weather
-if weatherCode < 23 or weatherCode in [26,27,28,41,42,43]: 
+if weatherCode < 23 or weatherCode in [26,41,42,43]: 
 	maxBright = cloudy
 elif weatherCode >= 32 and weatherCode <= 36:
 	maxBright = sunny
@@ -87,25 +89,22 @@ if debug:
 cTime = time.localtime()
 now = time.time()
 
-# Calc sunrise/sunset timeframes. 
-# Sunrise/set starts 40 minutes before actual time, and 
-# ends 20 minutes after actual time, gradually changing brightness during the hour.
 
+# Sunrise: start brightening 15 mins before, end 75 mins after
 sunriseTime = str(cTime[0]) + '-' + str(cTime[1]) + '-' + str(cTime[2]) + ' ' + sunrise
+sunriseStart = int(time.mktime(time.strptime(sunriseTime, "%Y-%m-%d %I:%M %p"))) - 900
+sunriseEnd = sunriseStart + 5400
 
-sunriseStart = int(time.mktime(time.strptime(sunriseTime, "%Y-%m-%d %I:%M %p"))) - 1800
-sunriseEnd = sunriseStart + 3600
-
+# Sunset: start dimming 75 mins before, end 15 mins after
 sunsetTime = str(cTime[0]) + '-' + str(cTime[1]) + '-' + str(cTime[2]) + ' ' + sunset
+sunsetStart = int(time.mktime(time.strptime(sunsetTime, "%Y-%m-%d %I:%M %p"))) - 4500
+sunsetEnd = sunsetStart + 5400
 
-sunsetStart = int(time.mktime(time.strptime(sunsetTime, "%Y-%m-%d %I:%M %p"))) - 2400
-sunsetEnd = sunsetStart + 3600
 
-
-# Determine the brightness
+# Determine the current brightness
 if now >= sunriseStart and now <= sunriseEnd:
 	elapsed = now - sunriseStart
-	percent = elapsed / 3600
+	percent = elapsed / 5400
 	brightness = maxBright * percent
 	timeOfDay = "Sunrise"
 		
@@ -115,7 +114,7 @@ elif now > sunriseEnd and now < sunsetStart:
 
 elif now >= sunsetStart and now <= sunsetEnd:
 	elapsed = sunsetEnd - now
-	percent = elapsed / 3600
+	percent = elapsed / 5400
 	brightness = maxBright * percent
 	timeOfDay = "Sunset"
 	
@@ -126,19 +125,12 @@ else:
 if debug:
 	print(timeOfDay + ", Brightness: " + str(brightness * 2.55))
 
-# Change the brightness quicker if it's brighter as 
-# changes seem to be less noticable at higher brightness levels
-def getChangeAmt(brightness):
-	if currentBrightness > 200:
-		return 10
-	elif currentBrightness > 100:
-		return 5
-	elif currentBrightness > 50:
-		return 3
-	else:
-		return 1
-
-
+# Change the brightness quicker at the beginning of the
+# transition, then slowing near the end
+def getChangeAmt(current, target):
+	return round(abs(current-target) / 10) + 1
+	
+	
 # Set the brightness gradually
 pi = pigpio.pi()
 currentBrightness = pi.get_PWM_dutycycle(pin)
@@ -149,7 +141,7 @@ if targetBrightness > currentBrightness:
 	while currentBrightness <= targetBrightness:
 		pi.set_PWM_dutycycle(pin, currentBrightness)
 		
-		amt = getChangeAmt(currentBrightness)
+		amt = getChangeAmt(currentBrightness, targetBrightness)
 			
 		currentBrightness = currentBrightness + amt
 		time.sleep(0.05)
@@ -159,7 +151,7 @@ elif targetBrightness < currentBrightness:
 	while currentBrightness >= targetBrightness:
 		pi.set_PWM_dutycycle(pin, currentBrightness)
 		
-		amt = getChangeAmt(currentBrightness)
+		amt = getChangeAmt(currentBrightness, targetBrightness)
 		
 		currentBrightness = currentBrightness - amt
 		time.sleep(0.05)
