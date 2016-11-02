@@ -81,14 +81,15 @@ $isAutoBrightness = json_decode(file_get_contents('/var/www/html/window.conf'))-
         <h3>Brightness</h3><output for="fader" id="volume"><?php echo round($brightness / 2.55) ?>%</output><br/><br/>
 		
 		<div class="divider"></div>
-		<div style="width: 32px; padding-top: 8px; float: left;">
-			<img src="/img/brightness-dim.png" height="32" />
+		
+		<div class="dim">
+			<img src="/img/brightness-dim.png" alt="Dim">
 		</div>
-		<div style="width: 32px; float: right; padding-top: 8px; ">
-			<img src="/img/brightness-bright.png" height="32" />
+		<div class="bright">
+			<img src="/img/brightness-bright.png" alt="Bright">
 		</div>
-		<div style="margin: 0 48px;">
-			<input type="range" min="0" max="256" step="16" value="<?php echo $brightness ?>" id="fader" 
+		<div class="slider">
+			<input type="range" min="0" max="256" step="8" value="<?php echo $brightness ?>" id="fader" 
 				oninput="outputUpdate(value)">
 		</div>
 		<div class="clearfix"></div><br/>
@@ -96,55 +97,50 @@ $isAutoBrightness = json_decode(file_get_contents('/var/www/html/window.conf'))-
 		
 		<a href="#" class="btn btn-<?php echo ($isAutoBrightness) ? 'primary' : 'default' ?> pull-right" style="width: 33%" id="autobrightness">
 			<span class="glyphicon glyphicon-ok"></span></a>
-		<div style="margin-top: 5px; float: left;">Auto-Brightness</div>
+		
+		<div class="pull-left" style="margin-top: 5px">Auto-Brightness</div>
         <br/><br/><br/>
         <div class="divider"></div>
-        
-        <script>
-	       	function outputUpdate(vol) 
-		   	{
-				$('#volume').text(Math.round(vol / 2.55) + '%');
-				
-				if ($('#autobrightness').hasClass('btn-primary')) {
-					$('#autobrightness').trigger('click');
-				}
-				
-				$.ajax({
-				  method: "POST",
-				  url: "index.php",
-				  data: { brightness: vol}
-				});
-			}
-			
-			function updateAutoBrightness() 
-			{
-				var elem = $('#autobrightness');
-				
-				elem.toggleClass('btn-primary btn-default');
-				
-				// Auto Brightness
-				var isAuto = (elem.hasClass('btn-primary')) ? 1 : 0;
-				
-				$.ajax({
-				  method: "POST",
-				  url: "index.php",
-				  data: { autoBrightness: isAuto}
-				})
-				.done(function( msg ) {
-				    $('input[type=range]').val(msg);
-				    $('#volume').text(Math.round(msg / 2.55) + '%');
-				});
-			}
-			
-			$('#autobrightness').on('click', updateAutoBrightness);
-        </script>
-        
       </div>
     </div><!-- /.container -->
 
-
-    
-    <!-- Include all compiled plugins (below), or include individual files as needed -->
-    <script src="/js/bootstrap.min.js"></script>
+	<script>
+       	function outputUpdate(vol) 
+	   	{
+			$('#volume').text(Math.round(vol / 2.55) + '%');
+			
+			if ($('#autobrightness').hasClass('btn-primary')) {
+				$('#autobrightness').trigger('click');
+			}
+			
+			$.ajax({
+			  method: "POST",
+			  url: "index.php",
+			  data: { brightness: vol}
+			});
+		}
+		
+		function updateAutoBrightness() 
+		{
+			var elem = $('#autobrightness');
+			
+			elem.toggleClass('btn-primary btn-default');
+			
+			// Auto Brightness
+			var isAuto = (elem.hasClass('btn-primary')) ? 1 : 0;
+			
+			$.ajax({
+			  method: "POST",
+			  url: "index.php",
+			  data: { autoBrightness: isAuto}
+			})
+			.done(function( msg ) {
+			    $('input[type=range]').val(msg);
+			    $('#volume').text(Math.round(msg / 2.55) + '%');
+			});
+		}
+		
+		$('#autobrightness').on('click', updateAutoBrightness);
+    </script>
   </body>
 </html>
