@@ -17,7 +17,28 @@ output {
 	height: 25px;
 	clear: both;
 }
+.dim {
+	width: 32px; 
+	padding-top: 8px; 
+	float: left;
+}
+.bright {
+	width: 32px; 
+	float: right; 
+	padding-top: 8px; 
+}
+.dim img,
+.bright img {
+	height: 32px;
+}
+.slider {
+	margin: 0 48px;
+}
 
+/**
+ * Range input styling
+ * -----------------------------
+ */
 input[type=range] {
   -webkit-appearance: none;
   width: 100%;
