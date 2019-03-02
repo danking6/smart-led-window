@@ -13,13 +13,17 @@
 # GPIO pin number
 pin = 21
 
-# Yahoo! woeid (location ID)
-woeid = "12762731"
+# Latitude/longitude for location
+lat = 43.92
+lon = -75.05
+
+# Darksky API key
+api_key = 'YOUR_API_KEY'
 
 # Brightness levels (percent)
-cloudy = 20
-mixed = 40
-sunny = 75
+cloudy = 40
+mixed = 60
+sunny = 80
 
 # Config file, persistent configs
 confFile = '/var/www/html/window.conf'
@@ -42,25 +46,22 @@ if not int(settings['auto']):
 		print('Auto brightness disabled, exiting...')
 	exit()
 	
-
-url = "https://query.yahooapis.com/v1/public/yql?q="
-url = url + "select item.condition, astronomy.sunrise, astronomy.sunset "
-url = url + "from weather.forecast where woeid=" + woeid + "&format=json"
+url = "https://api.darksky.net/forecast/" + api_key + "/" + str(lat) + "," + str(lon)
+url = url + "?exclude=minutely,hourly,alerts,flags"
 
 # Refresh weather data every 15 minutes
 if (settings['timestamp'] + 900) < time.time():
 	try:
 		if debug:
-			print('Getting Yahoo! weather data...')
+			print('Getting Darksky weather data...')
 			
 		data = requests.get(url, timeout=10).json()
 	
 		# Save/cache values
 		settings['auto'] = 1
-		settings['weather'] = int(data['query']['results']['channel']['item']['condition']['code'])
-		settings['weatherText'] = data['query']['results']['channel']['item']['condition']['text']
-		settings['sunrise'] = data['query']['results']['channel']['astronomy']['sunrise']
-		settings['sunset'] = data['query']['results']['channel']['astronomy']['sunset']
+		settings['cloudCover'] = data['currently']['cloudCover']
+		settings['sunrise'] = data['daily']['data'][0]['sunriseTime']
+		settings['sunset'] = data['daily']['data'][0]['sunsetTime']
 		settings['timestamp'] = round(time.time())
 		
 		f = open(confFile, 'w')
@@ -68,19 +69,19 @@ if (settings['timestamp'] + 900) < time.time():
 		f.close()
 		
 	except:
-		print("Error: Unable to connect to Yahoo! API")
+		print("Error: Unable to connect to Darksky API")
 
 
 # Set max brightness based on weather
-if settings['weather'] < 23 or settings['weather'] in [26,41,42,43]: 
+if settings['cloudCover'] > 0.8: 
 	maxBright = cloudy
-elif settings['weather'] >= 32 and settings['weather'] <= 36:
+elif settings['cloudCover'] < 0.3:
 	maxBright = sunny
 else:
 	maxBright = mixed
 
 if debug:
-	print("Weather code: " + str(settings['weather']) + " (" + settings['weatherText'] + "), Sunrise: " + settings['sunrise'] + ", Sunset: " + settings['sunset'])
+	print("Cloud cover: " + str(settings['cloudCover']) + ", Sunrise: " + str(settings['sunrise']) + ", Sunset: " + str(settings['sunset']))
 	print("Max brightness: " + str(maxBright))
 
 # Current time
@@ -89,13 +90,15 @@ now = time.time()
 
 
 # Sunrise: start brightening 20 mins before, end 70 mins after
-sunriseTime = str(cTime[0]) + '-' + str(cTime[1]) + '-' + str(cTime[2]) + ' ' + settings['sunrise']
-sunriseStart = int(time.mktime(time.strptime(sunriseTime, "%Y-%m-%d %I:%M %p"))) - 1200
+#sunriseTime = str(cTime[0]) + '-' + str(cTime[1]) + '-' + str(cTime[2]) + ' ' + settings['sunrise']
+#sunriseStart = int(time.mktime(time.strptime(sunriseTime, "%Y-%m-%d %I:%M %p"))) - 1200
+sunriseStart = int(settings['sunrise'])
 sunriseEnd = sunriseStart + 5400
 
 # Sunset: start dimming 75 mins before, end 15 mins after
-sunsetTime = str(cTime[0]) + '-' + str(cTime[1]) + '-' + str(cTime[2]) + ' ' + settings['sunset']
-sunsetStart = int(time.mktime(time.strptime(sunsetTime, "%Y-%m-%d %I:%M %p"))) - 4500
+#sunsetTime = str(cTime[0]) + '-' + str(cTime[1]) + '-' + str(cTime[2]) + ' ' + settings['sunset']
+#sunsetStart = int(time.mktime(time.strptime(sunsetTime, "%Y-%m-%d %I:%M %p"))) - 4500
+sunsetStart = int(settings['sunset'])
 sunsetEnd = sunsetStart + 5400
 
 
