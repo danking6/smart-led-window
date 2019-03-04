@@ -90,15 +90,11 @@ now = time.time()
 
 
 # Sunrise: start brightening 20 mins before, end 70 mins after
-#sunriseTime = str(cTime[0]) + '-' + str(cTime[1]) + '-' + str(cTime[2]) + ' ' + settings['sunrise']
-#sunriseStart = int(time.mktime(time.strptime(sunriseTime, "%Y-%m-%d %I:%M %p"))) - 1200
-sunriseStart = int(settings['sunrise'])
+sunriseStart = int(settings['sunrise']) - 1200
 sunriseEnd = sunriseStart + 5400
 
 # Sunset: start dimming 75 mins before, end 15 mins after
-#sunsetTime = str(cTime[0]) + '-' + str(cTime[1]) + '-' + str(cTime[2]) + ' ' + settings['sunset']
-#sunsetStart = int(time.mktime(time.strptime(sunsetTime, "%Y-%m-%d %I:%M %p"))) - 4500
-sunsetStart = int(settings['sunset'])
+sunsetStart = int(settings['sunset']) - 4500
 sunsetEnd = sunsetStart + 5400
 
 
