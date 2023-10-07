@@ -14,16 +14,11 @@
 pin = 21
 
 # Latitude/longitude for location
-lat = 43.92
-lon = -75.05
+lat = 00.00
+lon = -00.00
 
-# Darksky API key
-api_key = 'YOUR_API_KEY'
-
-# Brightness levels (percent)
-cloudy = 40
-mixed = 60
-sunny = 80
+# Maximum brightness level
+maxBright = 65
 
 # Config file, persistent configs
 confFile = '/var/www/html/window.conf'
@@ -34,7 +29,8 @@ debug = True
 ##### End configuration #####
 
 
-import requests,time,pigpio,json
+import requests,time,pigpio,json,datetime,os
+from suntime import Sun, SunTimeException
 
 # Load config file for cache/settings
 f = open(confFile, 'r')
@@ -46,57 +42,31 @@ if not int(settings['auto']):
 		print('Auto brightness disabled, exiting...')
 	exit()
 	
-url = "https://api.darksky.net/forecast/" + api_key + "/" + str(lat) + "," + str(lon)
-url = url + "?exclude=minutely,hourly,alerts,flags"
-
-# Refresh weather data every 15 minutes
-if (settings['timestamp'] + 900) < time.time():
-	try:
-		if debug:
-			print('Getting Darksky weather data...')
-			
-		data = requests.get(url, timeout=10).json()
-	
-		# Save/cache values
-		settings['auto'] = 1
-		settings['cloudCover'] = data['currently']['cloudCover']
-		settings['sunrise'] = data['daily']['data'][0]['sunriseTime']
-		settings['sunset'] = data['daily']['data'][0]['sunsetTime']
-		settings['timestamp'] = round(time.time())
-		
-		f = open(confFile, 'w')
-		f.write(json.dumps(settings))
-		f.close()
-		
-	except:
-		print("Error: Unable to connect to Darksky API")
-
-
-# Set max brightness based on weather
-if settings['cloudCover'] > 0.8: 
-	maxBright = cloudy
-elif settings['cloudCover'] < 0.3:
-	maxBright = sunny
-else:
-	maxBright = mixed
-
-if debug:
-	print("Cloud cover: " + str(settings['cloudCover']) + ", Sunrise: " + str(settings['sunrise']) + ", Sunset: " + str(settings['sunset']))
-	print("Max brightness: " + str(maxBright))
 
 # Current time
 cTime = time.localtime()
 now = time.time()
 
 
+sun = Sun(lat, lon)
+
+# Get today's sunrise and sunset 
+sunrise = sun.get_sunrise_time().timestamp()
+sunset = sun.get_sunset_time().timestamp()
+
 # Sunrise: start brightening 20 mins before, end 70 mins after
-sunriseStart = int(settings['sunrise']) - 1200
+sunriseStart = sunrise - 1200
 sunriseEnd = sunriseStart + 5400
 
 # Sunset: start dimming 75 mins before, end 15 mins after
-sunsetStart = int(settings['sunset']) - 4500
+sunsetStart = sunset - 4500
 sunsetEnd = sunsetStart + 5400
 
+if debug:
+	print("sunriseStart: " + str(sunriseStart) + "\nsunriseEnd:    " + str(sunriseEnd))
+	print("\nsunsetStart: " + str(sunsetStart) + "\nsunsetEnd: " + str(sunsetEnd) + "\nnow:          " + str(now))
+
+#exit()
 
 # Determine the current brightness
 if now >= sunriseStart and now <= sunriseEnd:
@@ -130,7 +100,12 @@ def getChangeAmt(current, target):
 	
 # Set the brightness gradually
 pi = pigpio.pi()
-currentBrightness = pi.get_PWM_dutycycle(pin)
+try:
+	currentBrightness = pi.get_PWM_dutycycle(pin)
+except:
+	os.system("/usr/bin/pigs p 21 255")
+	currentBrightness = pi.get_PWM_dutycycle(pin)
+
 targetBrightness = brightness * 2.55
 
 # Brightness increasing
